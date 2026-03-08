@@ -1,91 +1,94 @@
-{
-  "name": "AFK Bot",
-  "bot-account": {
-    "username": "Technoblade",
-    "password": "",
-    "type": "offline"
-  },
-  "server": {
-    "ip": "ricoiscool.aternos.me",
-    "port": 56559,
-    "version": "1.21.1"
-  },
-  "position": {
-    "enabled": true,
-    "x": 0,
-    "y": 100,
-    "z": 0
-  },
-  "utils": {
-    "auto-auth": {
-      "enabled": true,
-      "password": "chalol78"
-    },
-    "anti-afk": {
-      "enabled": true,
-      "sneak": true
-    },
-    "chat-messages": {
-      "enabled": true,
-      "repeat": true,
-      "repeat-delay": 120,
-      "messages": [
-        "I'm a regular player",
-        "Subscribe to Slobos!",
-        "I like to play Minecraft!"
-      ]
-    },
-    "chat-log": true,
-    "auto-reconnect": true,
-    "auto-reconnect-delay": 2000,
-    "max-reconnect-delay": 120000,
-    "periodic-rejoin": {
-      "enabled": false,
-      "min-interval": 20,
-      "max-interval": 60
-    }
-  },
-  "movement": {
-    "enabled": true,
-    "circle-walk": {
-      "enabled": true,
-      "radius": 4,
-      "speed": 3000
-    },
-    "look-around": {
-      "enabled": true,
-      "interval": 5000
-    },
-    "random-jump": {
-      "enabled": true,
-      "interval": 10000
-    }
-  },
-  "modules": {
-    "avoidMobs": true,
-    "combat": true,
-    "beds": false,
-    "chat": true,
-    "console-commands": true
-  },
-  "combat": {
-    "attack-mobs": true,
-    "auto-eat": true
-  },
-  "beds": {
-    "pick-up-day": false,
-    "place-night": false
-  },
-  "discord": {
-    "enabled": false,
-    "webhookUrl": "YOUR_DISCORD_WEBHOOK_URL_HERE",
-    "events": {
-      "connect": true,
-      "disconnect": true,
-      "chat": false
-    }
-  },
-  "chat": {
-    "respond": true
+const mineflayer = require('mineflayer')
+
+function createBot() {
+  const bot = mineflayer.createBot({
+    host: 'BlossomVillesmp12.aternos.me',
+    port: 36029,
+    username: 'Ap_Bas_Khelo',
+    version: '1.16.5'
+  })
+
+  function random(min, max) {
+    return Math.random() * (max - min) + min
   }
+
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+  }
+
+  function resetControls() {
+    const keys = ['forward','back','left','right','jump','sprint','sneak']
+    keys.forEach(k => bot.setControlState(k, false))
+  }
+
+  function smoothLook() {
+    const yaw = bot.entity.yaw + random(-0.8, 0.8)
+    const pitch = bot.entity.pitch + random(-0.2, 0.2)
+    bot.look(yaw, pitch, true)
+  }
+
+  function randomMovement() {
+    resetControls()
+    const actions = [
+      () => bot.setControlState('forward', true),
+      () => bot.setControlState('back', true),
+      () => bot.setControlState('left', true),
+      () => bot.setControlState('right', true),
+      () => bot.setControlState('jump', true),
+      () => bot.setControlState('sneak', true),
+      () => {
+        bot.setControlState('forward', true)
+        bot.setControlState('sprint', true)
+      },
+      () => {} // idle
+    ]
+    actions[randomInt(0, actions.length - 1)]()
+  }
+
+  function creativeFloat() {
+    if (bot.game.gameMode !== 1) return
+    const up = random(-0.05, 0.05)
+    bot.entity.position.y += up
+  }
+
+  function randomHotbarSwitch() {
+    const slot = randomInt(0, 8)
+    bot.setQuickBarSlot(slot)
+  }
+
+  function humanBehaviorLoop() {
+    smoothLook()
+    randomMovement()
+    creativeFloat()
+    if (Math.random() < 0.2) randomHotbarSwitch()
+    setTimeout(humanBehaviorLoop, randomInt(2000, 6000))
+  }
+
+  // AuthMe handling
+  bot.on('messagestr', (msg) => {
+    if (msg.includes('Please login')) {
+      bot.chat('/login hey1234')
+    }
+    if (msg.includes('Please register')) {
+      bot.chat('/register hey1234 hey1234')
+    }
+  })
+
+  bot.once('spawn', () => {
+    console.log('Ultra realistic human AFK started.')
+    // Optional: force login after short delay
+    setTimeout(() => {
+      bot.chat('/login hey1234')
+    }, 3000)
+    humanBehaviorLoop()
+  })
+
+  bot.on('end', () => {
+    console.log('Disconnected. Reconnecting...')
+    setTimeout(createBot, 20000)
+  })
+
+  bot.on('error', err => console.log('Error:', err))
 }
+
+createBot()
